@@ -1,3 +1,7 @@
+Modification
+========
+I added a custom combobox on the UI to save customized attribute in VOC xml format. As a reference for those who also want to add their custom attributes.
+
 LabelImg
 ========
 
