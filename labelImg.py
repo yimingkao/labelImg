@@ -128,12 +128,20 @@ class MainWindow(QMainWindow, WindowMixin):
         self.diffcButton = QCheckBox(getStr('useDifficult'))
         self.diffcButton.setChecked(False)
         self.diffcButton.stateChanged.connect(self.btnstate)
+        self.rctaLabel = QLabel('RCTA')
+        self.rctaButton = QComboBox()
+        rctaString = ['', 'ек(major)', 'ек(minor)', 'ек(no care)', 'еk(major)', 'еk(minor)', 'еk(no care)']
+        self.rctaButton.addItems(rctaString)
+        self.rctaButton.activated[int].connect(self.rctastate)
+        
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         # Add some of widgets to listLayout
         listLayout.addWidget(self.editButton)
         listLayout.addWidget(self.diffcButton)
+        listLayout.addWidget(self.rctaLabel)
+        listLayout.addWidget(self.rctaButton)
         listLayout.addWidget(useDefaultLabelContainer)
 
         # Create and add a widget for showing current label items
@@ -411,6 +419,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.fit_window = False
         # Add Chris
         self.difficult = False
+        self.rcta = 0
 
         ## Fix the compatible issue for qt4 and qt5. Convert the QStringList to python list
         if settings.get(SETTING_RECENT_FILES):
@@ -444,6 +453,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.setDrawingColor(self.lineColor)
         # Add chris
         Shape.difficult = self.difficult
+        Shape.rcta = self.rcta
 
         def xbool(x):
             if isinstance(x, QVariant):
@@ -706,6 +716,33 @@ class MainWindow(QMainWindow, WindowMixin):
         except:
             pass
 
+    def rctastate(self, item= None):
+        """ Function to handle difficult examples
+        Update on each object """
+        if not self.canvas.editing():
+            return
+
+        item = self.currentItem()
+        if not item: # If not selected Item, take the first one
+            item = self.labelList.item(self.labelList.count()-1)
+
+        rcta = self.rctaButton.currentIndex()
+
+        try:
+            shape = self.itemsToShapes[item]
+        except:
+            pass
+        # Checked and Update
+        try:
+            if rcta != shape.rcta:
+                shape.rcta = rcta
+                self.setDirty()
+            else:  # User probably changed item visibility
+                self.canvas.setShapeVisible(shape, item.checkState() == Qt.Checked)
+        except:
+            pass
+
+
     # React to canvas signals.
     def shapeSelectionChanged(self, selected=False):
         if self._noSelectionSlot:
@@ -745,7 +782,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def loadLabels(self, shapes):
         s = []
-        for label, points, line_color, fill_color, difficult in shapes:
+        for label, points, line_color, fill_color, difficult, rcta in shapes:
             shape = Shape(label=label)
             for x, y in points:
 
@@ -756,6 +793,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
                 shape.addPoint(QPointF(x, y))
             shape.difficult = difficult
+            shape.rcta = rcta
             shape.close()
             s.append(shape)
 
@@ -785,7 +823,8 @@ class MainWindow(QMainWindow, WindowMixin):
                         fill_color=s.fill_color.getRgb(),
                         points=[(p.x(), p.y()) for p in s.points],
                        # add chris
-                        difficult = s.difficult)
+                        difficult = s.difficult,
+                        rcta = s.rcta)
 
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
         # Can add differrent annotation formats here
@@ -822,6 +861,7 @@ class MainWindow(QMainWindow, WindowMixin):
             shape = self.itemsToShapes[item]
             # Add Chris
             self.diffcButton.setChecked(shape.difficult)
+            self.rctaButton.setCurrentIndex(shape.rcta)
 
     def labelItemChanged(self, item):
         shape = self.itemsToShapes[item]
